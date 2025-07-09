@@ -27,8 +27,13 @@ def fetch_hik_data_range(start_date, end_date, cursor_holder):
                     dt = datetime.strptime(cam['time'], "%Y-%m-%dT%H:%M:%S+07:00")
                 except:
                     dt = datetime.strptime(cam['time'], "%Y-%m-%dT%H:%M:%S+08:00")
-                q = f"INSERT INTO cam.camera_Menas ([Time], cameraIndexCode, exitNum, enterNum) VALUES ('{dt}', {cam['cameraIndexCode']}, {cam['exitNum']}, {cam['enterNum']})"
-                safe_execute(q, cursor_holder)
+                
+                safe_execute(f"SELECT * FROM [Menas_DB].[cam].[camera_Menas] WHERE cameraIndexCode = '{cam['cameraIndexCode']}' and [Time] = '{dt}'")
+                
+                existing = cursor_holder['cursor'].fetchall()
+                if len(existing) < 1:
+                    q = f"INSERT INTO cam.camera_Menas ([Time], cameraIndexCode, exitNum, enterNum) VALUES ('{dt}', {cam['cameraIndexCode']}, {cam['exitNum']}, {cam['enterNum']})"
+                    safe_execute(q, cursor_holder)
             cursor_holder['cursor'].commit()
         except Exception as e:
             logger.error(f"Artemis error {day_start}: {e}")
