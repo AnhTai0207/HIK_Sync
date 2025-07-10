@@ -14,6 +14,7 @@ def fetch_hik_data_range(start_date, end_date, cursor_holder):
     headers = {"X-Ca-Key": ARTEMIS_KEY, "X-Ca-Signature": generate_signature()}
     for day in range((end_date - start_date).days + 1):
         day_start = start_date + timedelta(days=day)
+        logger.info(f"Fetching Hik data on {day_start.date()}")
         body = {
             "pageNo": 1, "pageSize": 1, "cameraIndexCodes": "222,306,210,216",
             "statisticsType": 1,
