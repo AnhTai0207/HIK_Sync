@@ -7,14 +7,16 @@ from database.db_connection import safe_execute
 logger = setup_logger("artemis_service")
 
 def generate_signature():
-    msg = "GET\\n*/*\\napplication/json\\n/artemis/api/aiapplication/v1/people/statisticsTotalNumByTime"
+    msg = "GET\n*/*\napplication/json\n/artemis/api/aiapplication/v1/people/statisticsTotalNumByTime"
     key_bytes = bytes(ARTEMIS_SECRET, 'utf-8')
     message_bytes = bytes(msg, 'utf-8')
     signature = hmac.new(key_bytes, msg=message_bytes, digestmod=hashlib.sha256).digest()
     return base64.b64encode(signature).decode('utf-8')
 
 def fetch_hik_data_range(start_date, end_date, cursor_holder):
-    headers = {"X-Ca-Key": ARTEMIS_KEY, "X-Ca-Signature": generate_signature()}
+    print(generate_signature())
+    headers = {"X-Ca-Key": ARTEMIS_KEY, 
+               "X-Ca-Signature": generate_signature()}
     for day in range((end_date - start_date).days + 1):
         day_start = start_date + timedelta(days=day)
         logger.info(f"Fetching Hik data on {day_start.date()}")
@@ -24,8 +26,6 @@ def fetch_hik_data_range(start_date, end_date, cursor_holder):
             "startTime": day_start.strftime("%Y-%m-%dT%H:%M:%S+07:00"),
             "endTime": day_start.strftime("%Y-%m-%dT23:59:00+07:00")
         }
-        print("Call API")
-        res = requests.get(url=ARTEMIS_URL, headers=headers, json=body, verify=False).json()
         try:
             res = requests.get(url=ARTEMIS_URL, headers=headers, json=body, verify=False).json()
             for cam in res["data"]["list"]:
@@ -33,7 +33,7 @@ def fetch_hik_data_range(start_date, end_date, cursor_holder):
                     dt = datetime.strptime(cam['time'], "%Y-%m-%dT%H:%M:%S+07:00")
                 except:
                     dt = datetime.strptime(cam['time'], "%Y-%m-%dT%H:%M:%S+08:00")
-                safe_execute(f"SELECT * FROM [Menas_DB].[cam].[camera_Menas] WHERE cameraIndexCode = '{cam['cameraIndexCode']}' and [Time] = '{dt}'")
+                safe_execute(f"SELECT * FROM [Menas_DB].[cam].[camera_Menas] WHERE cameraIndexCode = '{cam['cameraIndexCode']}' and [Time] = '{dt}'", cursor_holder)
                 
                 existing = cursor_holder['cursor'].fetchall()
                 if len(existing) < 1:
@@ -41,4 +41,4 @@ def fetch_hik_data_range(start_date, end_date, cursor_holder):
                     safe_execute(q, cursor_holder)
             cursor_holder['cursor'].commit()
         except Exception as e:
-            logger.error(f"Artemis error {day_start}: {e}")
+            logger.error(f"Hik error {day_start}: {e}")
